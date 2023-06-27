@@ -2,19 +2,6 @@
 
 set -m
 
-# Enable IP forwarding
-echo 'net.ipv4.ip_forward = 1' | tee -a /etc/sysctl.conf
-echo 'net.ipv6.conf.all.forwarding = 1' | tee -a /etc/sysctl.conf
-sysctl -p /etc/sysctl.conf
-
-# Prepare run dirs
-if [ ! -d "/var/run/sshd" ]; then
-  mkdir -p /var/run/sshd
-fi
-
-# Set root password
-echo "root:${PASSWORD}" | chpasswd
-
 # Install routes
 IFS=',' read -ra SUBNETS <<< "${ADVERTISE_ROUTES}"
 for s in "${SUBNETS[@]}"; do
@@ -27,7 +14,7 @@ if [[ -z "$LOGIN_SERVER" ]]; then
 fi
 
 # Start tailscaled and bring tailscale up
-/usr/local/bin/tailscaled &
+/usr/local/bin/tailscaled ${TAILSCALED_ARGS} &
 until /usr/local/bin/tailscale up \
   --reset --authkey=${AUTH_KEY} \
 	--login-server ${LOGIN_SERVER} \
@@ -37,8 +24,5 @@ do
     sleep 0.1
 done
 echo Tailscale started
-
-# Start SSH
-/usr/sbin/sshd -D
 
 fg %1
